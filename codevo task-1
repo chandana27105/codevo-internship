@@ -1,0 +1,78 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Load the dataset
+data = pd.read_csv('/content/winequalityN.csv')
+
+# Check the first few rows of the dataset
+print(data.head())
+
+# Check for missing values
+print(data.isnull().sum())
+
+# Fill missing values (if any) with the median value for simplicity
+# Iterate through all columns except 'type'
+for col in data.columns:
+    if col != 'type':
+        for wine_type in data['type'].unique():
+            data.loc[data['type'] == wine_type, col] = data.loc[data['type'] == wine_type, col].fillna(data.loc[data['type'] == wine_type, col].median())
+
+# Preprocessing - Encode 'type' column if it exists (e.g., 'red'/'white')
+if 'type' in data.columns:
+    data['type'] = pd.get_dummies(data['type'], drop_first=True)
+
+# Split features and target (assuming 'quality' is the target)
+X = data.drop('quality', axis=1)
+y = data['quality']
+
+# Split data into training and testing sets (80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Normalize the features using StandardScaler
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Model development - Linear Regression, Decision Tree, Random Forest, XGBoost
+
+# 1. Linear Regression
+lr_model = LinearRegression()
+lr_model.fit(X_train_scaled, y_train)
+lr_predictions = lr_model.predict(X_test_scaled)
+
+# 2. Decision Tree Regressor
+dt_model = DecisionTreeRegressor(random_state=42)
+dt_model.fit(X_train_scaled, y_train)
+dt_predictions = dt_model.predict(X_test_scaled)
+
+# 3. Random Forest Regressor
+rf_model = RandomForestRegressor(random_state=42, n_estimators=100)
+rf_model.fit(X_train_scaled, y_train)
+rf_predictions = rf_model.predict(X_test_scaled)
+
+# 4. XGBoost Regressor
+xgb_model = XGBRegressor(random_state=42, n_estimators=100)
+xgb_model.fit(X_train_scaled, y_train)
+xgb_predictions = xgb_model.predict(X_test_scaled)
+
+# Evaluate models
+models = {
+    "Linear Regression": lr_predictions,
+    "Decision Tree": dt_predictions,
+    "Random Forest": rf_predictions,
+    "XGBoost": xgb_predictions
+}
+
+for name, predictions in models.items():
+    print(f"{name} Mean Squared Error: {mean_squared_error(y_test, predictions)}")
+    print(f"{name} R^2 Score: {r2_score(y_test, predictions)}")
