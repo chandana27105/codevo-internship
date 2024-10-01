@@ -1,0 +1,79 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+
+# Load the dataset (replace 'sales_data.csv' with the actual path to your dataset)
+data = pd.read_csv('/content/Advertising.csv')
+
+# Example: Preprocess date, season, and festival columns
+'''data['Date'] = pd.to_datetime(data['Date'])
+
+# Extract day, month, and year as separate features
+data['Day'] = data['Date'].dt.day
+data['Month'] = data['Date'].dt.month
+data['Year'] = data['Date'].dt.year
+
+# Encode categorical variables like season and festival
+label_encoder = LabelEncoder()
+data['Season'] = label_encoder.fit_transform(data['Season'])
+data['Festival'] = label_encoder.fit_transform(data['Festival'])'''
+
+# Feature scaling for numerical inputs
+scaler = MinMaxScaler()
+features = ['TV', 'Radio', 'Newspaper']
+data[features] = scaler.fit_transform(data[features])
+
+# Define features (X) and target (y)
+X = data[features]
+y = data['Sales']  # Assuming 'Sales' is your target variable
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define the Keras model
+model = Sequential([
+    Dense(64, input_dim=X_train.shape[1], activation='relu'),
+    Dense(32, activation='relu'),
+    Dense(1, activation='sigmoid')  # Sigmoid for normalized sales prediction
+])
+
+# Compile the model
+model.compile(optimizer=Adam(learning_rate=0.001), loss='mean_squared_error')
+
+# Train the model
+history = model.fit(X_train, y_train, epochs=100, batch_size=32, validation_split=0.2)
+
+# Evaluate the model on the test set
+test_loss = model.evaluate(X_test, y_test)
+print(f"Test Loss: {test_loss}")
+
+# Predict sales on the test set
+y_pred = model.predict(X_test)
+
+# Get the maximum sales value from the training set to scale predictions back
+max_sales = y_train.max()
+
+# Convert predictions back to actual sales values
+y_pred_actual = y_pred * max_sales
+
+# Plot training and validation loss
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
+
+# Plot actual sales vs predicted sales
+plt.scatter(y_test, y_pred_actual)
+plt.title('Actual Sales vs Predicted Sales')
+plt.xlabel('Actual Sales')
+plt.ylabel('Predicted Sales')
+plt.show()
